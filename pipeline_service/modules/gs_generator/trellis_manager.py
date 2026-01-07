@@ -50,30 +50,48 @@ class TrellisService:
         if not self.pipeline:
             raise RuntimeError("Trellis pipeline not loaded.")
 
-        image_rgb = trellis_request.image.convert("RGB")
-        logger.info(f"Generating Trellis {trellis_request.seed=} and image size {trellis_request.image.size}")
+        images_rgb = [image.convert("RGB") for image in trellis_request.images]
+        logger.info(f"Generating Trellis {trellis_request.seed=} and image size {trellis_request.images[0].size}")
 
         params = self.default_params.overrided(trellis_request.params)
-
+        buffer = None
         start = time.time()
         try:
-            outputs = self.pipeline.run(
-                image_rgb,
-                seed=trellis_request.seed,
-                sparse_structure_sampler_params={
-                    "steps": params.sparse_structure_steps,
-                    "cfg_strength": params.sparse_structure_cfg_strength,
-                },
-                slat_sampler_params={
-                    "steps": params.slat_steps,
-                    "cfg_strength": params.slat_cfg_strength,
-                    
-                },
-                preprocess_image=False,
-                formats=["gaussian"],
-                num_oversamples=params.num_oversamples,
-            )
-
+            if trellis_request.default:
+                outputs = self.pipeline.run(
+                    images_rgb[0],
+                    seed=trellis_request.seed,
+                    sparse_structure_sampler_params={
+                        "steps": params.sparse_structure_steps,
+                        "cfg_strength": params.sparse_structure_cfg_strength,
+                    },
+                    slat_sampler_params={
+                        "steps": params.slat_steps,
+                        "cfg_strength": params.slat_cfg_strength,
+                    },
+                    preprocess_image=False,
+                    formats=["gaussian"],
+                    num_oversamples=params.num_oversamples,
+                )
+            else:
+                # Generate with voxel-aware texture steps
+                outputs, num_voxels = self.pipeline.run_multi_image_with_voxel_count(
+                    images_rgb,
+                    seed=trellis_request.seed,
+                    sparse_structure_sampler_params={
+                        "steps": params.sparse_structure_steps,
+                        "cfg_strength": params.sparse_structure_cfg_strength,
+                    },
+                    slat_sampler_params={
+                        "steps": params.slat_steps,
+                        "cfg_strength": params.slat_cfg_strength,
+                    },
+                    preprocess_image=False,
+                    formats=["gaussian"],
+                    num_oversamples=params.num_oversamples,
+                    voxel_threshold=25000,
+                )
+            
             generation_time = time.time() - start
             gaussian = outputs["gaussian"][0]
 
@@ -86,7 +104,7 @@ class TrellisService:
                 ply_file=buffer.getvalue() if buffer else None # bytes
             )
 
-            logger.success(f"Trellis finished generation in {generation_time:.2f}s.")
+            # logger.success(f"Trellis finished generation in {generation_time:.2f}s with {num_voxels} occupied voxels.")
             return result
         finally:
             if buffer:

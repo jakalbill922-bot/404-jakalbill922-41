@@ -1,6 +1,6 @@
-# Trellis 3D Pipeline
+# 3D Generation Pipeline
 
-Production-ready pipeline for image-to-3D generation using Trellis.
+Automated pipeline for generating 3D models from 2D images.
 
 ## Requirements
 
@@ -51,7 +51,7 @@ docker run --gpus all -v ./pipeline_service:/workspace/pipeline_service -p 10006
 
 ```bash
 curl -X POST "http://localhost:10006/generate" \
-  -F "prompt_image_file=@image.png" \
+  -F "prompt_image_file=@cr7.png" \
   -F "seed=42" \
   -o model.ply
 ```

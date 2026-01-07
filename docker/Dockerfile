@@ -69,6 +69,9 @@ RUN wget https://github.com/404-Repo/spz/releases/download/v.0.1.2/pyspz-wheels-
     pip install pyspz-1.0.0-cp311-cp311-manylinux_2_34_x86_64.whl && \
     rm -rf pyspz-wheels-ubuntu-latest.zip *.whl
 
+# Install ben2
+RUN pip install -e "git+https://github.com/PramaLLC/BEN2.git#egg=ben2"
+
 # Set working directory
 WORKDIR /workspace
 
@@ -76,4 +79,5 @@ WORKDIR /workspace
 COPY pipeline_service /workspace
 
 EXPOSE 10006
-CMD ["python",  "serve.py"]
+# Use uvicorn with reload for development, python serve.py for production
+CMD ["uvicorn", "serve:app", "--host", "0.0.0.0", "--port", "10006", "--reload"]
